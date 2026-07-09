@@ -1,0 +1,14 @@
+# Ignore the environment file (contains real passwords)
+srcs/.env
+
+# Ignore the evaluation secrets folder
+secrets/
+
+# Ignore macOS system files (crucial since you work on a Mac)
+.DS_Store
+**/.DS_Store
+
+# Ignore editor swap and cache files
+.vscode/
+*.swp
+*~
