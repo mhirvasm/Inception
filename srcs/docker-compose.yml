@@ -1,0 +1,40 @@
+networks:
+  network:
+    name: inception-network
+    driver: bridge
+
+
+volumes:
+  mariadb:
+    name: mariadb
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/mariadb
+
+
+services:
+  mariadb:
+    container_name: mariadb
+    build: ./requirements/mariadb
+    image: mariadb:inception
+    restart: always
+    environment:
+      # Explicitly maps the internal container variable to the host .env variable
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      WORDPRESS_DATABASE_NAME: ${WORDPRESS_DATABASE_NAME}
+      WORDPRESS_DATABASE_USER: ${WORDPRESS_DATABASE_USER}
+      WORDPRESS_DATABASE_USER_PASSWORD: ${WORDPRESS_DATABASE_USER_PASSWORD}
+    volumes:
+      - mariadb:/var/lib/mysql
+    networks:
+      - network
+    healthcheck:
+      # Uses the root user and root password for immediate access verification
+      test: ["CMD-SHELL", "mariadb-admin ping --protocol=tcp --host=localhost -uroot --password=$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 40s
+
