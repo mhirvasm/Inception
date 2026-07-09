@@ -42,3 +42,19 @@ Since copy-paste is disabled in the bare-metal VirtualBox console, the provision
     * Configures the SSH daemon to listen on port 4241 and denies root login.
     * Registers Docker and SSH to start on boot.
 4.  Once complete, abandon the VM console and manage the system remotely via SSH from the host machine.
+	*	*ssh -p 4241 (login name)127.0.0.1
+
+5.	### Orchestration & Persistent Data (`Makefile`)
+	Docker containers are ephemeral. To satisfy the requirement that data must persist if a container crashes or is restarted, the infrastructure utilizes local bind mounts. 
+	* The `Makefile` acts as the primary orchestrator. Before executing `docker compose up`, it automatically provisions the necessary host directories (`/home/<login>/data/mariadb` and `/home/<login>/data/wordpress`) on the Alpine virtual machine.
+	* This guarantees the directories exist before Docker attempts to mount them, preventing runtime crash loops.
+
+6.	### Secrets Management
+	Passwords and credentials are never hardcoded into `docker-compose.yml` or Dockerfiles, as this violates strict security protocols.
+	* A local host script (`configure-env.sh`) generates cryptographically secure, alphanumeric passwords using `openssl` (or `sha256sum` as a fallback).
+	* This script dynamically writes the `srcs/.env` file required by Docker Compose and isolates evaluation credentials in a local `secrets/` directory. Both are excluded from version control via `.gitignore`.
+
+7.	### Database Architecture (MariaDB)
+	The MariaDB container is built from `alpine:3.20`. 
+	* **Networking:** The default `mariadb-server.cnf` configuration is overridden to bind the daemon to `0.0.0.0` instead of `127.0.0.1`, allowing incoming connections from the WordPress container across the isolated Docker network.
+	* **Process Management (PID 1):** The container strictly adheres to the PID 1 requirement. It avoids anti-patterns like `tail -f`. The custom `init.sh` entrypoint script configures the database and then uses the `exec` command to hand over process control entirely to the `mysqld` daemon. This ensures the database can cleanly intercept `SIGTERM` signals for graceful shutdowns without data corruption.

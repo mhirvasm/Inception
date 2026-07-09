@@ -1,0 +1,15 @@
+[mysqld]
+# Run as the mysql user for security
+user = mysql
+
+# The directory where the database files are stored (mapped to your host volume)
+datadir = /var/lib/mysql
+
+# Listen on all IP addresses in the Docker network, not just localhost
+bind-address = 0.0.0.0
+
+# The default port MariaDB uses
+port = 3306
+
+# Skip network name resolution to speed up connections
+skip-name-resolve
