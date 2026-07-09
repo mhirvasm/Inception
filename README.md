@@ -57,4 +57,11 @@ Since copy-paste is disabled in the bare-metal VirtualBox console, the provision
 7.	### Database Architecture (MariaDB)
 	The MariaDB container is built from `alpine:3.20`. 
 	* **Networking:** The default `mariadb-server.cnf` configuration is overridden to bind the daemon to `0.0.0.0` instead of `127.0.0.1`, allowing incoming connections from the WordPress container across the isolated Docker network.
-	* **Process Management (PID 1):** The container strictly adheres to the PID 1 requirement. It avoids anti-patterns like `tail -f`. The custom `init.sh` entrypoint script configures the database and then uses the `exec` command to hand over process control entirely to the `mysqld` daemon. This ensures the database can cleanly intercept `SIGTERM` signals for graceful shutdowns without data corruption.
+	* **Process Management (PID 1):** The container strictly adheres to the PID 1 requirement. It avoids anti-patterns like `tail -f`. The custom `init.sh` entrypoint script configures the database and then uses the `exec` command to hand over process control entirely to the `mysqld` daemon. This ensures the database can cleanly intercept `SIGTERM` signals for graceful shutdowns without data corruption.	
+
+	KEEP ON EYE ON THIS: 
+	(
+		Your database files are owned by klogd (a system user), not the mysql user. In some Alpine environments, the mysql user ID (UID) and Group ID (GID) are 101, whereas klogd might be 103 or similar.
+
+		While it is currently "working," if you run into permission errors later, it is because your container's internal mysql user doesn't match the ownership of the files on the host. We will keep an eye on this.
+	)
