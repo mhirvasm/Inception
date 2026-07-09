@@ -1,5 +1,5 @@
 #!/bin/sh
-# We use /bin/sh because Alpine utilizes BusyBox, which uses ash/sh by default, not bash.
+# We use /bin/sh because Alpine utilizes BusyBox, which uses ash/sh by default.
 
 # 1. VALIDATION
 # Check if a login name was provided as the first argument ($1).
@@ -12,44 +12,32 @@ fi
 
 LOGIN=$1
 
-# 2. PACKAGE INSTALLATION
-# Update the package index and install required software.
+echo "--> Enabling community repository..."
+# This command searches for the 'community' repository line in the config file
+# and removes the comment character (#) at the start of the line to enable it.
+sed -i '/community/s/^#//' /etc/apk/repositories
+
 echo "--> Installing base packages..."
+# Update the package index now that the community repo is active, then install.
 apk update
 apk add sudo openssh docker docker-cli-compose make git
 
-# 3. USER PROVISIONING
-# Create the user without prompting for a password interactively (-D).
-echo "--> Creating user: $LOGIN"
-adduser -D $LOGIN
+echo "--> Setting up user: $LOGIN"
+# Check if the user already exists in the system.
+# Redirecting output to /dev/null keeps the terminal clean.
+if id "$LOGIN" >/dev/null 2>&1; then
+    echo "User $LOGIN already exists, skipping creation."
+else
+    # Create the user without prompting for a password interactively (-D).
+    adduser -D $LOGIN
+    # Set a temporary default password (e.g., '1234') for the new user.
+    echo "$LOGIN:1234" | chpasswd
+fi
 
-# Set a temporary default password for the new user (e.g., '1234').
-# The syntax 'username:password' is piped into chpasswd.
-echo "$LOGIN:1234" | chpasswd
-
-# Add the user to the 'wheel' group (for sudo) and 'docker' group.
+# Ensure the user is in the correct administrative groups.
+# Running these commands again if the user is already in the group is safe.
 adduser $LOGIN wheel
 adduser $LOGIN docker
 
-# Modify the sudoers file to allow the 'wheel' group to execute commands.
-# sed -i edits the file in place.
-sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
-
-# 4. SSH CONFIGURATION
-echo "--> Configuring SSH..."
-# Change default port 22 to 4241.
-sed -i 's/#Port 22/Port 4241/' /etc/ssh/sshd_config
-# Explicitly disable root login over SSH for security.
-sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
-
-# 5. SERVICE INITIALIZATION
-echo "--> Enabling and starting services..."
-# Add Docker and SSH to the default boot runlevel so they start on reboot.
-rc-update add docker boot
-rc-update add sshd default
-
-# Start the services immediately so we don't have to reboot right now.
-rc-service sshd restart
-service docker start
-
-echo "--> Setup complete! You can now SSH into port 4241 with user $LOGIN."
+# Grant sudo privileges to the 'wheel' group by uncommenting the relevant line.
+sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/'
