@@ -59,9 +59,30 @@ Since copy-paste is disabled in the bare-metal VirtualBox console, the provision
 	* **Networking:** The default `mariadb-server.cnf` configuration is overridden to bind the daemon to `0.0.0.0` instead of `127.0.0.1`, allowing incoming connections from the WordPress container across the isolated Docker network.
 	* **Process Management (PID 1):** The container strictly adheres to the PID 1 requirement. It avoids anti-patterns like `tail -f`. The custom `init.sh` entrypoint script configures the database and then uses the `exec` command to hand over process control entirely to the `mysqld` daemon. This ensures the database can cleanly intercept `SIGTERM` signals for graceful shutdowns without data corruption.	
 
-	KEEP ON EYE ON THIS: 
-	(
-		Your database files are owned by klogd (a system user), not the mysql user. In some Alpine environments, the mysql user ID (UID) and Group ID (GID) are 101, whereas klogd might be 103 or similar.
+8.	Application Layer (WordPress & PHP-FPM)
+	The WordPress container acts as the application server. It does not run a traditional web server like Apache; instead, it utilizes PHP-FPM (FastCGI Process Manager) coupled with Alpine Linux.
 
-		While it is currently "working," if you run into permission errors later, it is because your container's internal mysql user doesn't match the ownership of the files on the host. We will keep an eye on this.
-	)
+	Automated Installation (WP-CLI): To adhere to the requirement that the infrastructure must configure itself without manual browser intervention, the container downloads and executes wp-cli. This command-line utility handles downloading the WordPress core, injecting database credentials into wp-config.php, and creating both the administrator and standard user accounts defined in the .env file.
+
+	Memory Management Fix: By default, PHP limits script memory allocation to 128MB. Because extracting modern WordPress core files via WP-CLI exceeds this, a custom .ini configuration is injected during the Docker build (memory_limit = 256M) to prevent out-of-memory fatal errors during initialization.
+
+	Startup Synchronization: The WordPress container utilizes Docker Compose's depends_on: service_healthy directive. It will not execute its initialization script until the MariaDB container passes its UNIX socket ping test. This prevents race conditions where WordPress attempts to populate a database that has not finished booting.
+
+	Process Management (PID 1): After installation, the script uses the exec command to replace the bash shell with php-fpm83 -F (running in the foreground). This promotes PHP-FPM to PID 1, allowing it to correctly receive termination signals from the Docker daemon.
+
+	UID/GID Mapping Note: Files generated in the /var/www/html volume are owned by the nobody user (the default unprivileged user for PHP-FPM in Alpine). Similar to the MariaDB host volume mapping (where the host may display ownership as klogd due to UID 101/103 discrepancies), this is expected behavior based on how Alpine maps internal container UIDs to the host system.
+
+	Infrastructure Management & Debugging
+	Because the containers run in detached mode, verifying the internal state or diagnosing startup failures requires checking the Docker daemon logs.
+
+	Standard Logging Commands:
+	Must be executed from the directory containing docker-compose.yml (e.g., ~/inceptionWork/srcs).
+
+	View logs for the entire stack:
+
+	Bash
+	docker compose logs
+
+	View logs for a specific container:
+	docker compose logs <service_name> 
+

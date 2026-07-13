@@ -13,6 +13,14 @@ volumes:
       o: bind
       device: ${DATA_PATH}/mariadb
 
+# This stores your website files on the host VM so they aren't lost on restart.
+  wordpress:
+    name: wordpress
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/wordpress
 
 services:
   mariadb:
@@ -38,3 +46,30 @@ services:
       retries: 8
       start_period: 40s
 
+  wordpress:
+    container_name: wordpress
+    build: ./requirements/wordpress
+    image: wordpress:inception
+    restart: always
+    # CRITICAL: Do not start WordPress until MariaDB is fully initialized and healthy.
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      # We explicitly map all the variables required by your WP-CLI init script
+      WORDPRESS_DATABASE_NAME: ${WORDPRESS_DATABASE_NAME}
+      WORDPRESS_DATABASE_USER: ${WORDPRESS_DATABASE_USER}
+      WORDPRESS_DATABASE_USER_PASSWORD: ${WORDPRESS_DATABASE_USER_PASSWORD}
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      WORDPRESS_TITLE: ${WORDPRESS_TITLE}
+      WORDPRESS_ADMIN: ${WORDPRESS_ADMIN}
+      WORDPRESS_ADMIN_PASSWORD: ${WORDPRESS_ADMIN_PASSWORD}
+      WORDPRESS_ADMIN_EMAIL: ${WORDPRESS_ADMIN_EMAIL}
+      WORDPRESS_USER: ${WORDPRESS_USER}
+      WORDPRESS_USER_EMAIL: ${WORDPRESS_USER_EMAIL}
+      WORDPRESS_USER_PASSWORD: ${WORDPRESS_USER_PASSWORD}
+    volumes:
+      # Map the named volume to the exact path where PHP-FPM expects the files
+      - wordpress:/var/www/html
+    networks:
+      - network
