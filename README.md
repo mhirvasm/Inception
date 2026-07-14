@@ -79,10 +79,50 @@ Since copy-paste is disabled in the bare-metal VirtualBox console, the provision
 	Must be executed from the directory containing docker-compose.yml (e.g., ~/inceptionWork/srcs).
 
 	View logs for the entire stack:
-
 	Bash
 	docker compose logs
 
 	View logs for a specific container:
 	docker compose logs <service_name> 
 
+
+	### Web Server Layer (NGINX)
+	The NGINX container serves as the sole entry point to the infrastructure, strictly adhering to the HTTPS requirement on port 443. 
+
+	* **TLS/SSL Security:** A self-signed X.509 certificate and RSA key are dynamically generated via `openssl` during the container's initialization. The server block strictly enforces `TLSv1.2` and `TLSv1.3` protocols, rejecting older vulnerable standards.
+	* **FastCGI Proxying:** NGINX does not execute PHP directly. It utilizes FastCGI parameters (`$fastcgi_script_name`) to construct absolute paths, passing execution requests across the Docker network to the WordPress container on port 9000.
+	* **Process Management:** To maintain PID 1 status and prevent immediate container exit, the initialization script executes NGINX using the `daemon off;` directive, shifting it from a background process to the foreground.
+
+	## Alpine VM: Minimal GUI and Browser Installation
+
+	To test the web application locally within the Alpine VM and bypass host network restrictions, install a lightweight XFCE desktop environment and Firefox.
+
+	### 1. Install Base X.Org Server
+	Install the minimal required X11 packages.
+	```bash
+	sudo setup-xorg-base
+
+	2. Install XFCE, DBus, and Firefox
+	Install the desktop environment, terminal emulator, system message bus, and browser.
+
+	Bash
+	sudo apk add xfce4 xfce4-terminal firefox dbus font-terminus
+	3. Enable and Start DBus
+	Add the DBus service to the default runlevel and start it.
+
+	Bash
+	sudo rc-update add dbus default
+	sudo service dbus start
+	4. Configure the X Session
+	Configure the X server to launch XFCE on startup.
+
+	Bash
+	echo "exec startxfce4" > ~/.xinitrc
+	5. Launch the GUI
+	Initialize the desktop environment.
+
+	Bash
+	startx
+
+	You must map the domain to your localhost IP address in the VM's /etc/hosts file with command:
+	echo "127.0.0.1 mhirvasm.42.fr" | sudo tee -a /etc/hosts
