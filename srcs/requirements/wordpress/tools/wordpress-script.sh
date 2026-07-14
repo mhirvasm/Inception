@@ -18,9 +18,6 @@ else
         --dbpass="${WORDPRESS_DATABASE_USER_PASSWORD}" \
         --dbhost="mariadb:3306" \
         --path='/var/www/html'
-	#FOR PORT FORWARDING
-	sed -i "s/.*WP_SITEURL.*/define('WP_SITEURL', 'https:\/\/' . \$_SERVER['HTTP_HOST']);/" /var/www/html/wp-config.php
-	sed -i "s/.*WP_HOME.*/define('WP_HOME', 'https:\/\/' . \$_SERVER['HTTP_HOST']);/" /var/www/html/wp-config.php
     echo "==> Installing WordPress and creating Admin user..."
     # Set up the site name and the primary administrator
     wp core install --allow-root \
