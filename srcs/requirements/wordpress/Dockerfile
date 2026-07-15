@@ -16,10 +16,10 @@ RUN apk update && apk add --no-cache \
     wget \
     mariadb-client
 
-#TEST WITHOUT!!!!!!
+
 # 2. Symlink PHP for convenience 
 # Alpine 3.20 installs the binary as 'php83', but wp-cli expects just 'php'.
-#RUN ln -s /usr/bin/php83 /usr/bin/php
+RUN ln -s /usr/bin/php83 /usr/bin/php
 
 # 3. Download and install WP-CLI (WordPress Command Line Interface)
 # This allows us to configure WordPress without a web browser.
