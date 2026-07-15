@@ -1,4 +1,4 @@
-FROM alpine:3.20.6
+FROM alpine:3.23
 
 # 1. Install PHP-FPM, necessary PHP extensions, and download tools
 # - php83-fpm: The engine that executes PHP code.
